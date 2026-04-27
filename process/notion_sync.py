@@ -5,27 +5,57 @@ from notion_client import Client
 from upload.google_drive import get_drive_file_url
 
 notion = Client(auth=os.getenv("NOTION_TOKEN"))
-# 데이터베이스 ID를 사용하는 것을 권장합니다 (관리 효율상)
 database_id = os.getenv("NOTION_DATABASE_ID") 
 
-def create_rich_text_blocks(text, block_type="paragraph", max_length=2000):
+# 🌟 추가된 함수: 마크다운(**)을 노션 볼드체 속성으로 변환해 줍니다.
+def convert_text_to_notion_rich_text(text):
+    parts = re.split(r'\*\*(.*?)\*\*', text)
+    rich_text_list = []
+    
+    for i, part in enumerate(parts):
+        if not part: 
+            continue
+            
+        if i % 2 == 1:
+            # **로 감싸진 부분은 bold: True 처리
+            rich_text_list.append({
+                "type": "text",
+                "text": {"content": part},
+                "annotations": {"bold": True}
+            })
+        else:
+            # 일반 텍스트
+            rich_text_list.append({
+                "type": "text",
+                "text": {"content": part}
+            })
+            
+    return rich_text_list
+
+# 🌟 수정된 함수: 변환 함수를 거쳐서 블록을 생성하도록 변경되었습니다.
+def create_rich_text_blocks(text, block_type="paragraph", max_length=2000, split_by_newline=True):
     blocks = []
-    paragraphs = text.split('\n')
-    for para in paragraphs:
-        para = para.strip()
-        if not para: continue
-        
-        # 2000자 초과 대응
-        chunks = [para[i:i+max_length] for i in range(0, len(para), max_length)]
+    
+    # 옵션에 따라 줄바꿈으로 블록을 나눌지, 통째로 처리할지 결정합니다.
+    if split_by_newline:
+        sections = [p.strip() for p in text.split('\n') if p.strip()]
+    else:
+        # 통째로 처리할 때는 앞뒤 공백만 자르고 내부의 \n은 그대로 살려둡니다.
+        sections = [text.strip()] if text.strip() else []
+
+    for section in sections:
+        # 2000자 초과 시 노션 에러를 막기 위한 청크 쪼개기
+        chunks = [section[i:i+max_length] for i in range(0, len(section), max_length)]
         for chunk in chunks:
             blocks.append({
                 "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [{"text": {"content": chunk}}]
+                "type": block_type,
+                block_type: {
+                    "rich_text": convert_text_to_notion_rich_text(chunk)
                 }
             })
     return blocks
+
 
 def trigger_notion_upload(base_name, target_dir):
     print(f"🚀 [Notion 팀] '{base_name}' 노션 업로드 시작...")
@@ -64,16 +94,17 @@ def trigger_notion_upload(base_name, target_dir):
         children.append({"object": "block", "type": "heading_1", "heading_1": {"rich_text": [{"text": {"content": "📺 강의 다시보기" if is_video else "🎧 강의 다시듣기"}}]}})
         children.append({"object": "block", "type": block_type, block_type: {"type": "external", "external": {"url": embed_url}}})
 
-    # 요약
+    # 요약 (split_by_newline=False를 추가하여 블록이 쪼개지지 않게 방어)
     children.append({"object": "block", "type": "heading_1", "heading_1": {"rich_text": [{"text": {"content": "📌 강의 핵심 요약"}}]}})
-    children.append({"object": "block", "type": "bulleted_list_item", "bulleted_list_item": {"rich_text": [{"text": {"content": data["summary"]}}]}})
-    # 용어
+    children.extend(create_rich_text_blocks(data["summary"], block_type="bulleted_list_item", split_by_newline=False))
+    
+    # 용어 (위와 동일)
     children.append({"object": "block", "type": "heading_1", "heading_1": {"rich_text": [{"text": {"content": "📑 중요 용어 정리"}}]}})
-    children.append({"object": "block", "type": "bulleted_list_item", "bulleted_list_item": {"rich_text": [{"text": {"content": data["terms"]}}]}})
+    children.extend(create_rich_text_blocks(data["terms"], block_type="bulleted_list_item", split_by_newline=False))
 
-    # 전체 스크립트
+    # 전체 스크립트 (기존처럼 문단마다 블록을 나누기 위해 옵션을 적지 않음)
     children.append({"object": "block", "type": "heading_1", "heading_1": {"rich_text": [{"text": {"content": "📝 최종 교정 스크립트"}}]}})
-    children.extend(create_rich_text_blocks(data["corrected_text"]))
+    children.extend(create_rich_text_blocks(data["corrected_text"], block_type="paragraph", split_by_newline=True))
 
     try:
         # parent를 database_id로 설정하여 데이터베이스에 한 줄(Row)로 생성
