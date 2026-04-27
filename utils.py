@@ -12,101 +12,13 @@ from extract.pdf_extract import extract_text_from_pdf
 from extract.audio_extract import extract_text_from_audio
 from process.llm_gemini import correct_script_with_gemini
 from process.notion_sync import trigger_notion_upload
+from study_handler import StudyDataHandler
 
 print("라이브러리 import 완료")
 
 # 🎯 감시할 구글 드라이브 로컬 경로 (현재는 테스트용 폴더)
 WATCH_PATH = parent_page_id = os.getenv("WATCH_PATH")
 
-class StudyDataHandler(FileSystemEventHandler):
-    def on_created(self, event):
-        if event.is_directory:
-            return
-        
-        file_path = event.src_path
-        file_name = os.path.basename(file_path)
-        extension = os.path.splitext(file_name)[1].lower()
-        
-        # 파일이 완전히 복사될 때까지 아주 잠시 대기 (용량이 큰 영상 파일 씹힘 방지)
-        time.sleep(2)
-        
-        print(f"\n[{time.strftime('%H:%M:%S')}] 🚨 새 파일 감지됨: {file_name}")
-        if "_temp" in file_name or file_name.startswith("~$"):
-            print("임시파일이므로 무시합니다.")
-            return
-
-        base_name = os.path.splitext(file_name)[0]
-        # 영상/음성 파일인 경우 텍스트 추출 파이프라인 시작
-        if extension in ['.mp4', '.m4a', '.mp3', '.wav']:
-            audio_text = extract_text_from_audio(file_path)
-            self.save_result(base_name, audio_text, "음성스크립트")
-        # pdf라면 
-        if extension == '.pdf':
-            pdf_text = extract_text_from_pdf(file_path)
-            self.save_result(base_name, pdf_text, "강의자료")
-        
-        if extension in ['.mp4', '.m4a', '.mp3', '.wav', '.pdf']:
-            self.check_and_start_ai_correction(base_name)
-
-    def save_result(self, base_name, text, suffix):
-        save_name = f"{base_name}_{suffix}.txt"
-        save_path = os.path.join(WATCH_PATH, save_name)
-        with open(save_path, 'w', encoding='utf-8') as f:
-            f.write(text)
-        print(f"💾 저장됨: {save_path}")
-        # 앞부분 내용 살짝 미리보기
-        preview = text[:20] + "..." if len(text) > 20 else text
-        print(f"📝 미리보기: {preview}")
-
-    def check_and_start_ai_correction(self, base_name):
-        # 짝꿍 파일들의 예상 경로
-        audio_txt_path = os.path.join(WATCH_PATH, f"{base_name}_음성스크립트.txt")
-        pdf_txt_path = os.path.join(WATCH_PATH, f"{base_name}_강의자료.txt")
-        folder_path = os.path.join(WATCH_PATH, f"{base_name}")
-        result_json_path = os.path.join(folder_path, f"{base_name}_done.json")
-        # 이미 최종본이 있다면 중복 실행 방지
-        if os.path.exists(result_json_path) :
-            print(f"이미 '{base_name}'는 분석완료입니다.")
-            return
-
-        # 둘 다 존재한다면? Gemini 출동!
-        if os.path.exists(audio_txt_path) and os.path.exists(pdf_txt_path):
-            print(f"🔗 [매치 성공] '{base_name}' 자료 쌍을 찾았습니다. AI 교정을 시작합니다.")
-            with open(audio_txt_path, 'r', encoding='utf-8') as f:
-                audio_text = f.read()
-            with open(pdf_txt_path, 'r', encoding='utf-8') as f:
-                pdf_text = f.read()
-
-            # Gemini 호출
-            summary, terms, corrected_text = correct_script_with_gemini(audio_text, pdf_text)
-            self.save_result(base_name, corrected_text, "최종교정본")
-            analysis_result = {
-                "base_name": base_name,
-                "corrected_text": corrected_text,
-                "summary": summary,
-                "terms": terms,
-                "timestamp": time.time()
-            }
-            result_json_path = os.path.join(WATCH_PATH, f"{base_name}_result.json")
-            with open(result_json_path, 'w', encoding='utf-8') as f:
-                json.dump(analysis_result, f, ensure_ascii=False, indent=4)
-            print(f"💾 [저장 완료] '{base_name}' 분석 결과가 저장되었습니다.")
-
-            # 전용 폴더 생성
-            target_dir = os.path.join(WATCH_PATH, base_name)
-            os.makedirs(target_dir, exist_ok=True)
-            # 관련 모든 파일 이동 (mp4, pdf, txt 등)
-            # WATCH_PATH에 있는 base_name으로 시작하는 모든 파일을 새 폴더로 옮깁니다.
-            for filename in os.listdir(WATCH_PATH):
-                if filename.startswith(base_name) and filename != base_name: # 폴더 자신 제외
-                    old_path = os.path.join(WATCH_PATH, filename)
-                    new_path = os.path.join(target_dir, filename)
-                    time.sleep(1)
-                    shutil.move(old_path, new_path)
-            trigger_notion_upload(base_name, target_dir)
-
-        else:
-            print(f"⏳ '{base_name}'의 짝꿍 파일이 아직 없습니다.")
 
 def initial_scan(handler):
     """프로그램 시작 시, 아직 처리되지 않은 파일들을 찾아 처리합니다."""
@@ -118,14 +30,24 @@ def initial_scan(handler):
 
 
     #파일명을 넣고 원하는 작업을 진행. (안하는 작업을 주석처리)
-    base_name = "0422_3"
+    base_name = "0423_6"
 
-    #음성 스크립트와 강의자료.txt가 모두 만들어지고 교정하기~노션 업로드
-    #handler.check_and_start_ai_correction(base_name)
+    # file_path = os.path.join(WATCH_PATH, f"{base_name}.mp4")
+    # audio_text = extract_text_from_audio(file_path)
+    # if audio_text:
+    #     handler.save_result(base_name, audio_text, "음성스크립트")
+
+    file_path = os.path.join(WATCH_PATH, f"{base_name}.pdf")
+    pdf_text = extract_text_from_pdf(file_path)
+    if pdf_text:
+        handler.save_result(base_name, pdf_text, "강의자료")
+
+    #음성 스크립트와 강의자료.txt가 모두 만들어지고 교정해서 폴더에 넣어버림
+    handler.check_and_start_ai_correction(base_name)
 
     #이미 _result.json까지 만들어진 것을 노션 업로드만
-    #target_dir = os.path.join(WATCH_PATH, base_name)
-    #trigger_notion_upload(base_name, target_dir)
+    target_dir = os.path.join(WATCH_PATH, base_name)
+    trigger_notion_upload(base_name, target_dir)
         
 
 if __name__ == "__main__":
