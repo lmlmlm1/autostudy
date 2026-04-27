@@ -7,6 +7,7 @@ from upload.google_drive import get_drive_file_url
 notion = Client(auth=os.getenv("NOTION_TOKEN"))
 database_id = os.getenv("NOTION_DATABASE_ID") 
 
+import re
 # 🌟 추가된 함수: 마크다운(**)을 노션 볼드체 속성으로 변환해 줍니다.
 def convert_text_to_notion_rich_text(text):
     parts = re.split(r'\*\*(.*?)\*\*', text)
