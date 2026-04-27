@@ -5,6 +5,7 @@ from moviepy import VideoFileClip
 
 # 🚀 스피너(threading), sys, time 등 불필요한 모듈 전부 삭제!
 print("🧠 [Audio 팀] Faster-Whisper AI 모델 로딩 중...")
+#model = WhisperModel("large-v3-turbo", device="auto", compute_type="default")
 model = WhisperModel("small", device="auto", compute_type="default")
 print("✅ [Audio 팀] Whisper 준비 완료!")
 

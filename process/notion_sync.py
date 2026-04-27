@@ -59,10 +59,14 @@ def create_rich_text_blocks(text, block_type="paragraph", max_length=2000, split
 
 
 def trigger_notion_upload(base_name, target_dir):
-    print(f"🚀 [Notion 팀] '{base_name}' 노션 업로드 시작...")
     
     # 1. JSON 데이터 로드
     result_json_path = os.path.join(target_dir, f"{base_name}_result.json")
+    if os.path.exists(result_json_path) is False : 
+        return
+
+    print(f"🚀 [Notion 팀] '{base_name}' 노션 업로드 시작...")
+
     with open(result_json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
