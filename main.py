@@ -10,7 +10,6 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from extract.pdf_extract import extract_text_from_pdf
 from extract.pdf_image_save import extract_pages_to_images
-from extract.audio_extract import extract_text_from_audio
 from process.llm_gemini import correct_script_with_gemini
 from process.notion_sync import trigger_notion_upload
 from study_handler import StudyDataHandler

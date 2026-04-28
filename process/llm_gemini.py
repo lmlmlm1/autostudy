@@ -1,7 +1,9 @@
 import os
 import google.genai as genai
 from google.genai import types
+from dotenv import load_dotenv
 
+load_dotenv()
 api_key = os.getenv("API_KEY")
 if not api_key:
     print("⚠️ API_KEY 환경변수가 설정되지 않았습니다.")

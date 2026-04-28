@@ -5,9 +5,19 @@ import shutil
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from extract.pdf_extract import extract_text_from_pdf
-from extract.audio_extract import extract_text_from_audio
 from process.llm_gemini import correct_script_with_gemini
 from process.notion_sync import trigger_notion_upload
+
+#운영체제에 따른 선택
+import platform
+# 현재 운영체제 확인
+if platform.system() == 'Darwin':  # Mac인 경우
+    from extract.audio_extract_mac import extract_text_from_audio    
+    # 💡 macOS 백그라운드 실행 시 경로 꼬임 방지를 위한 절대 경로 설정
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    load_dotenv(os.path.join(BASE_DIR, '.env'))
+else:  # Windows나 Linux인 경우
+    from extract.audio_extract_windows import extract_text_from_audio
 # 🎯 감시할 구글 드라이브 로컬 경로 (현재는 테스트용 폴더)
 WATCH_PATH = os.getenv("WATCH_PATH")
 
