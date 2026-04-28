@@ -188,13 +188,18 @@ def append_anki_links_to_notion(base_name):
     print(f"\n🔗 [Notion 팀] '📖 {base_name}' 기존 페이지를 찾아 Anki 링크를 덧붙입니다...")
     
     # 1. 구글 드라이브에서 생성된 Anki CSV 파일들의 링크를 가져옵니다.
+    apkg_url = get_drive_file_url(f"{base_name}_통합본.apkg")
     basic_csv_url = get_drive_file_url(f"{base_name}_Basic.csv")
     mcq_csv_url = get_drive_file_url(f"{base_name}_MCQ.csv")
     cloze_csv_url = get_drive_file_url(f"{base_name}_Cloze.csv")
     
-    if not any([basic_csv_url, mcq_csv_url, cloze_csv_url]):
+    if not any([apkg_url, basic_csv_url, mcq_csv_url, cloze_csv_url]):
         print("⚠️ 덧붙일 Anki 파일(링크)을 찾을 수 없습니다.")
-        return
+        time.sleep(5)
+        apkg_url = get_drive_file_url(f"{base_name}_통합본.apkg")
+        basic_csv_url = get_drive_file_url(f"{base_name}_Basic.csv")
+        mcq_csv_url = get_drive_file_url(f"{base_name}_MCQ.csv")
+        cloze_csv_url = get_drive_file_url(f"{base_name}_Cloze.csv")
 
     try:
         # 2. 노션 데이터베이스 검색: "이름" 속성이 "📖 base_name"과 똑같은 페이지를 찾습니다.
@@ -221,7 +226,8 @@ def append_anki_links_to_notion(base_name):
         # 3. 페이지 맨 아래에 덧붙일 블록(Children)들을 조립합니다.
         children = []
         children.append({"object": "block", "type": "heading_1", "heading_1": {"rich_text": [{"text": {"content": "🗂️ 실전 복습용 Anki 덱 다운로드"}}]}})
-        
+        if apkg_url:
+            children.append({"object": "block", "type": "paragraph", "paragraph": {"rich_text": [{"type": "text", "text": {"content": "📥 통합 덱 다운로드", "link": {"url": apkg_url}}, "annotations": {"bold": True, "color": "red"}}]}})
         if basic_csv_url:
             children.append({"object": "block", "type": "paragraph", "paragraph": {"rich_text": [{"type": "text", "text": {"content": "📥 Basic (핵심 문답) 카드 다운로드", "link": {"url": basic_csv_url}}, "annotations": {"bold": True, "color": "blue"}}]}})
         if mcq_csv_url:

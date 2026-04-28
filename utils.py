@@ -61,8 +61,10 @@ def initial_scan(handler):
 
 
     #파일명을 넣고 원하는 작업을 진행. (안하는 작업을 주석처리)
-    base_name = "0422_1"
-    generate_anki_csv(base_name)
+    base_name = "0422_2"
+    #generate_anki_csv(base_name)
+    from process.notion_sync import append_anki_links_to_notion
+    append_anki_links_to_notion(base_name)
 
     # file_path = os.path.join(WATCH_PATH, f"{base_name}.mp4")
     # audio_text = extract_text_from_audio(file_path)

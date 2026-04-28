@@ -4,6 +4,8 @@ import time
 from google.genai import types
 from dotenv import load_dotenv
 from process.notion_sync import append_anki_links_to_notion
+import hashlib
+import genanki
 
 # 🎯 환경변수 로드 및 클라이언트 설정
 load_dotenv()
@@ -198,7 +200,94 @@ def generate_anki_csv(base_name):
                     f.write('\n'.join(data_list))
                 print(f"💾 [Anki 팀] {suffix} 파일 저장 완료: {os.path.basename(file_path)}")
 
-        time.sleep(1)
+        def generate_id(name):
+            return int(hashlib.sha256(name.encode('utf-8')).hexdigest(), 16) % (10**9)
+
+        deck_basic = genanki.Deck(generate_id(f"{base_name}::Basic"), f"{base_name}::Basic")
+        deck_cloze = genanki.Deck(generate_id(f"{base_name}::Cloze"), f"{base_name}::Cloze")
+        deck_mcq = genanki.Deck(generate_id(f"{base_name}::MCQ"), f"{base_name}::MCQ")
+
+        # 🌟 안키 순정 기본(Default) 디자인 CSS
+        anki_default_css = """
+        .card {
+        font-family: arial;
+        font-size: 20px;
+        text-align: center;
+        color: black;
+        background-color: white;
+        }
+        .cloze {
+        font-weight: bold;
+        color: blue;
+        }
+        .nightMode .cloze {
+        color: lightblue;
+        }
+        ul, ol {
+        text-align: left;
+        display: inline-block;
+        }
+        """
+
+        # 1. 안키 순정 스타일 Basic 모델
+        basic_model = genanki.Model(
+            1607392319, # 고유 ID
+            '기본(Basic) - 생성형', # 이름을 친숙하게 변경
+            fields=[
+                {'name': 'Front'}, 
+                {'name': 'Back'}
+            ],
+            templates=[{
+                'name': 'Card 1',
+                'qfmt': '{{Front}}',
+                'afmt': '{{FrontSide}}<hr id=answer>{{Back}}',
+            }],
+            css=anki_default_css # 👈 핵심! 순정 디자인 주입
+        )
+
+        # 2. 안키 순정 스타일 Cloze 모델
+        cloze_model = genanki.Model(
+            1607392320, # 고유 ID
+            '빈칸 뚫기(Cloze) - 생성형',
+            model_type=genanki.Model.CLOZE,
+            fields=[
+                {'name': 'Text'}, 
+                {'name': 'Back Extra'}
+            ],
+            templates=[{
+                'name': 'Cloze',
+                'qfmt': '{{cloze:Text}}',
+                'afmt': '{{cloze:Text}}<br><br>{{Back Extra}}',
+            }],
+            css=anki_default_css # 👈 핵심! 빈칸 파란색 및 다크모드 적용
+        )
+
+        # 이미 분류해둔 리스트를 활용하여 덱에 추가
+        for data_list, card_type, deck, model in [
+            (basic_lines, "Basic", deck_basic, basic_model),
+            (mcq_lines, "MCQ", deck_mcq, basic_model),
+            (cloze_lines, "Cloze", deck_cloze, cloze_model)
+        ]:
+            for line in data_list:
+                # 파이프(|)로 분리하고 양옆 공백 제거
+                parts = [p.strip() for p in line.split('|')]
+                if len(parts) >= 3:
+                    field1, field2, raw_tags = parts[0], parts[1], parts[2]
+                elif len(parts) == 2:
+                    field1, field2 = parts[0], parts[1]
+                    raw_tags = ""
+                else:
+                    continue # 형식이 망가진 줄은 건너뜀
+
+                tags = [t.replace('#', '') for t in raw_tags.split()] if raw_tags else []
+                note = genanki.Note(model=model, fields=[field1, field2], tags=tags)
+                deck.add_note(note)
+
+        apkg_path = os.path.join(target_dir, f"{base_name}_통합본.apkg")
+        genanki.Package([deck_basic, deck_cloze, deck_mcq]).write_to_file(apkg_path)
+        print(f"📦 [APKG 저장] {os.path.basename(apkg_path)} 완료")
+
+        time.sleep(2)
         append_anki_links_to_notion(base_name)
 
         print(f"✅ 모든 Anki 작업이 성공적으로 완료되었습니다.")
