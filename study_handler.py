@@ -2,6 +2,7 @@ import time
 import os
 import json
 import shutil
+from dotenv import load_dotenv
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from extract.pdf_extract import extract_text_from_pdf
