@@ -10,6 +10,7 @@ from watchdog.events import FileSystemEventHandler
 
 from extract.pdf_extract import extract_text_from_pdf
 from extract.audio_extract import extract_text_from_audio
+from extract.pdf_image_save import extract_pages_to_images
 from process.llm_gemini import correct_script_with_gemini
 from process.notion_sync import trigger_notion_upload
 from study_handler import StudyDataHandler
@@ -40,21 +41,21 @@ def initial_scan(handler):
 
 
 
-    #파일명을 넣고 원하는 작업을 진행. (안하는 작업을 주석처리)
-    base_name = "0424_67"
+    # 파일명을 넣고 원하는 작업을 진행. (안하는 작업을 주석처리)
+    base_name = "0424_2"
 
     # file_path = os.path.join(WATCH_PATH, f"{base_name}.mp4")
     # audio_text = extract_text_from_audio(file_path)
     # if audio_text:
-    #     handler.save_result(base_name, audio_text, "음성스크립트")
+    #   handler.save_result(base_name, audio_text, "음성스크립트")
 
     # file_path = os.path.join(WATCH_PATH, f"{base_name}.pdf")
     # pdf_text = extract_text_from_pdf(file_path)
-    # if pdf_text:
-    #     handler.save_result(base_name, pdf_text, "강의자료")
-
-    #음성 스크립트와 강의자료.txt가 모두 만들어지고 교정해서 폴더에 넣어버림
-    #handler.check_and_start_ai_correction(base_name)
+    # # if pdf_text:
+    # #    handler.save_result(base_name, pdf_text, "강의자료")
+    # extract_pages_to_images(file_path)
+    # # 음성 스크립트와 강의자료.txt가 모두 만들어지고 교정해서 폴더에 넣어버림
+    # handler.check_and_start_ai_correction(base_name)
 
     #이미 _result.json까지 만들어진 것을 노션 업로드만
     target_dir = os.path.join(WATCH_PATH, base_name)

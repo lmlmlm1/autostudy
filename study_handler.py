@@ -35,14 +35,14 @@ class StudyDataHandler(FileSystemEventHandler):
             audio_text = extract_text_from_audio(file_path)
             self.save_result(base_name, audio_text, "음성스크립트")
         # pdf라면 
+        # pdf라면 
         if extension == '.pdf':
             pdf_text = extract_text_from_pdf(file_path)
             self.save_result(base_name, pdf_text, "강의자료")
         
+        # ⭕️ 정상: 노션 업로드 코드를 지우고, AI 교정 함수만 부릅니다.
         if extension in ['.mp4', '.m4a', '.mp3', '.wav', '.pdf']:
             self.check_and_start_ai_correction(base_name)
-            target_dir = os.path.join(WATCH_PATH, base_name)
-            trigger_notion_upload(base_name, target_dir)
 
     def save_result(self, base_name, text, suffix):
         save_name = f"{base_name}_{suffix}.txt"
@@ -60,6 +60,7 @@ class StudyDataHandler(FileSystemEventHandler):
         pdf_txt_path = os.path.join(WATCH_PATH, f"{base_name}_강의자료.txt")
         folder_path = os.path.join(WATCH_PATH, f"{base_name}")
         result_json_path = os.path.join(folder_path, f"{base_name}_done.json")
+        
         # 이미 최종본이 있다면 중복 실행 방지
         if os.path.exists(result_json_path) :
             print(f"이미 '{base_name}'는 분석완료입니다.")
@@ -74,8 +75,17 @@ class StudyDataHandler(FileSystemEventHandler):
             with open(pdf_txt_path, 'r', encoding='utf-8') as f:
                 pdf_text = f.read()
 
-            # Gemini 호출
-            summary, terms, corrected_text = correct_script_with_gemini(audio_text, pdf_text)
+            # 💡 [수정됨] API 호출! (여기서 뻗어도 아래에서 방어합니다)
+            result = correct_script_with_gemini(audio_text, pdf_text)
+
+            # 🛡️ [수정됨] 에러 방패: API가 실패해서 None을 반환했다면 여기서 스톱! (에러 튕김 방지)
+            if result is None or result[0] is None:
+                print(f"⚠️ '{base_name}' 교정 실패 (API 오류). 프로그램 종료 없이 다음 파일 대기 상태로 넘어갑니다.")
+                return 
+
+            # 정상 성공 시에만 변수에 담기
+            summary, terms, corrected_text = result
+
             self.save_result(base_name, corrected_text, "최종교정본")
             analysis_result = {
                 "base_name": base_name,
@@ -89,17 +99,24 @@ class StudyDataHandler(FileSystemEventHandler):
                 json.dump(analysis_result, f, ensure_ascii=False, indent=4)
             print(f"💾 [저장 완료] '{base_name}' 분석 결과가 저장되었습니다.")
 
-            # 전용 폴더 생성
+            # 전용 폴더 생성 및 이동
             target_dir = os.path.join(WATCH_PATH, base_name)
             os.makedirs(target_dir, exist_ok=True)
-            # 관련 모든 파일 이동 (mp4, pdf, txt 등)
-            # WATCH_PATH에 있는 base_name으로 시작하는 모든 파일을 새 폴더로 옮깁니다.
             for filename in os.listdir(WATCH_PATH):
-                if filename.startswith(base_name) and filename != base_name: # 폴더 자신 제외
+                if filename.startswith(base_name) and filename != base_name:
                     old_path = os.path.join(WATCH_PATH, filename)
                     new_path = os.path.join(target_dir, filename)
-                    time.sleep(1)
+                    # 여기는 파일 이동이니 0.1초 딜레이면 충분합니다.
+                    time.sleep(0.1) 
                     shutil.move(old_path, new_path)
+
+            # 🚀 [여기에 추가!] 파일 정리가 모두 끝난 이 타이밍에 노션 업로드를 실행합니다.
+            print(f"🚀 '{base_name}' 노션 업로드를 트리거합니다!")
+            trigger_notion_upload(base_name, target_dir)
+
+            # 💡 [핵심] API를 한 번 성공적으로 썼으므로, 다음 파일이 API를 때리기 전에 '반드시' 여기서 15초를 쉽니다.
+            print("⏳ API RPM(분당 요청) 제한 방지를 위해 15초 대기합니다...")
+            time.sleep(15)
 
         else:
             print(f"⏳ '{base_name}'의 짝꿍 파일이 아직 없습니다.")
