@@ -12,6 +12,7 @@ from extract.pdf_extract import extract_text_from_pdf
 from extract.pdf_image_save import extract_pages_to_images
 from process.llm_gemini import correct_script_with_gemini
 from process.notion_sync import trigger_notion_upload
+from process.anki_generator import generate_anki_csv
 from study_handler import StudyDataHandler
 
 #운영체제에 따른 선택
@@ -35,11 +36,11 @@ def initial_scan(handler):
 
     #폴더 내 모든 파일 대상으로 하고 싶은 작업이 있다면 여기에서
     #예시) 미디어 파일만 전부 젼환하고 싶다.
-    all_files = [f for f in os.listdir(WATCH_PATH) if os.path.isfile(os.path.join(WATCH_PATH, f))]
-    for file_name in all_files:
-        file_path = os.path.join(WATCH_PATH, file_name)
-        base_name = os.path.splitext(file_name)[0]
-        handler.check_and_start_ai_correction(base_name)
+    # all_files = [f for f in os.listdir(WATCH_PATH) if os.path.isfile(os.path.join(WATCH_PATH, f))]
+    # for file_name in all_files:
+    #     file_path = os.path.join(WATCH_PATH, file_name)
+    #     base_name = os.path.splitext(file_name)[0]
+    #     handler.check_and_start_ai_correction(base_name)
         # extension = os.path.splitext(file_name)[1].lower()
         # if extension in ['.mp4', '.m4a', '.mp3', '.wav']:
         #     if f"{base_name}_음성스크립트.txt" not in all_files:
@@ -56,11 +57,12 @@ def initial_scan(handler):
     #             print(f"{dirname}_result.json doesnt exist")
     #             continue
     #         print(f"{dirname}_result.json does exists")
-    #         trigger_notion_upload(dirname, target_dir)
+    #         trigger_notion_upload(dirname)
 
 
     #파일명을 넣고 원하는 작업을 진행. (안하는 작업을 주석처리)
-    #base_name = "0424_67"
+    base_name = "0422_1"
+    generate_anki_csv(base_name)
 
     # file_path = os.path.join(WATCH_PATH, f"{base_name}.mp4")
     # audio_text = extract_text_from_audio(file_path)
@@ -76,8 +78,9 @@ def initial_scan(handler):
     #handler.check_and_start_ai_correction(base_name)
 
     #이미 _result.json까지 만들어진 것을 노션 업로드만
-    #target_dir = os.path.join(WATCH_PATH, base_name)
-    #trigger_notion_upload(base_name, target_dir)
+    #trigger_notion_upload(base_name)
+
+
         
 
 if __name__ == "__main__":

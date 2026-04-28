@@ -12,6 +12,7 @@ from extract.pdf_extract import extract_text_from_pdf
 from extract.pdf_image_save import extract_pages_to_images
 from process.llm_gemini import correct_script_with_gemini
 from process.notion_sync import trigger_notion_upload
+from process.anki_generator import generate_anki_csv
 from study_handler import StudyDataHandler
 
 #운영체제에 따른 선택
@@ -70,8 +71,7 @@ def initial_scan(handler):
 
         if text_made : 
             handler.check_and_start_ai_correction(base_name)
-            target_dir = os.path.join(WATCH_PATH, base_name)
-            trigger_notion_upload(base_name, target_dir)
+            trigger_notion_upload(base_name)
         
 
 if __name__ == "__main__":

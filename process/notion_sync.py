@@ -85,7 +85,8 @@ def create_rich_text_blocks(text, block_type="paragraph", split_by_newline=True)
             
     return blocks
     
-def trigger_notion_upload(base_name, target_dir):
+def trigger_notion_upload(base_name):
+    target_dir = os.path.join(WATCH_PATH, base_name)
     result_json_path = os.path.join(target_dir, f"{base_name}_result.json")
     if not os.path.exists(result_json_path): return
 
@@ -181,3 +182,56 @@ def trigger_notion_upload(base_name, target_dir):
             
     except Exception as e:
         print(f"❌ [Notion] 업로드 실패: {e}")
+
+def append_anki_links_to_notion(base_name):
+    print(f"\n🔗 [Notion 팀] '📖 {base_name}' 기존 페이지를 찾아 Anki 링크를 덧붙입니다...")
+    
+    # 1. 구글 드라이브에서 생성된 Anki CSV 파일들의 링크를 가져옵니다.
+    basic_csv_url = get_drive_file_url(f"{base_name}_Basic.csv")
+    mcq_csv_url = get_drive_file_url(f"{base_name}_MCQ.csv")
+    cloze_csv_url = get_drive_file_url(f"{base_name}_Cloze.csv")
+    
+    if not any([basic_csv_url, mcq_csv_url, cloze_csv_url]):
+        print("⚠️ 덧붙일 Anki 파일(링크)을 찾을 수 없습니다.")
+        return
+
+    try:
+        # 2. 노션 데이터베이스 검색: "이름" 속성이 "📖 base_name"과 똑같은 페이지를 찾습니다.
+        response = notion.databases.query(
+            database_id=database_id,
+            filter={
+                "property": "이름",
+                "title": {
+                    "equals": f"📖 {base_name}"
+                }
+            }
+        )
+        
+        # 페이지가 없으면 종료
+        if not response.get("results"):
+            print(f"❌ 일치하는 노션 페이지를 찾을 수 없습니다. (검색어: 📖 {base_name})")
+            return
+            
+        # 검색된 첫 번째 페이지의 고유 ID를 가져옵니다.
+        page_id = response["results"][0]["id"]
+        
+        # 3. 페이지 맨 아래에 덧붙일 블록(Children)들을 조립합니다.
+        children = []
+        children.append({"object": "block", "type": "heading_1", "heading_1": {"rich_text": [{"text": {"content": "🗂️ 실전 복습용 Anki 덱 다운로드"}}]}})
+        
+        if basic_csv_url:
+            children.append({"object": "block", "type": "paragraph", "paragraph": {"rich_text": [{"type": "text", "text": {"content": "📥 Basic (핵심 문답) 카드 다운로드", "link": {"url": basic_csv_url}}, "annotations": {"bold": True, "color": "blue"}}]}})
+        if mcq_csv_url:
+            children.append({"object": "block", "type": "paragraph", "paragraph": {"rich_text": [{"type": "text", "text": {"content": "📥 MCQ (객관식) 카드 다운로드", "link": {"url": mcq_csv_url}}, "annotations": {"bold": True, "color": "purple"}}]}})
+        if cloze_csv_url:
+            children.append({"object": "block", "type": "paragraph", "paragraph": {"rich_text": [{"type": "text", "text": {"content": "📥 Cloze (빈칸 뚫기) 카드 다운로드", "link": {"url": cloze_csv_url}}, "annotations": {"bold": True, "color": "green"}}]}})
+            
+        # 4. 찾은 페이지(page_id)의 자식 블록으로 새 블록들을 밀어 넣습니다.
+        notion.blocks.children.append(
+            block_id=page_id,
+            children=children
+        )
+        print("✅ [Notion 팀] 기존 페이지 맨 아래에 Anki 다운로드 링크 덧붙이기 성공!")
+        
+    except Exception as e:
+        print(f"❌ Notion 페이지 업데이트 실패: {e}")
