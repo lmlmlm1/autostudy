@@ -41,7 +41,7 @@ def initial_scan(handler):
         file_path = os.path.join(WATCH_PATH, file_name)
         file_name = os.path.basename(file_path)
         if "_temp" in file_name or file_name.startswith("~$") or file_name.startswith("."):
-            return
+            continue
         
         base_name = os.path.splitext(file_name)[0]
         extension = os.path.splitext(file_name)[1].lower()
@@ -72,6 +72,7 @@ def initial_scan(handler):
         if text_made : 
             handler.check_and_start_ai_correction(base_name)
             trigger_notion_upload(base_name)
+            generate_anki_csv(base_name)
         
 
 if __name__ == "__main__":

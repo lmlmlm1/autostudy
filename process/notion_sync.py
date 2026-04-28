@@ -6,6 +6,7 @@ from upload.google_drive import get_drive_file_url
 
 notion = Client(auth=os.getenv("NOTION_TOKEN"))
 database_id = os.getenv("NOTION_DATABASE_ID") 
+data_source_id = os.getenv("NOTION_DATA_SOURCE_ID")
 
 import re
 # 볼드체 처리
@@ -197,13 +198,15 @@ def append_anki_links_to_notion(base_name):
 
     try:
         # 2. 노션 데이터베이스 검색: "이름" 속성이 "📖 base_name"과 똑같은 페이지를 찾습니다.
-        response = notion.databases.query(
-            database_id=database_id,
-            filter={
-                "property": "이름",
-                "title": {
-                    "equals": f"📖 {base_name}"
-                }
+        response = notion.data_sources.query(
+            **{
+                "data_source_id": data_source_id,
+                "filter": {
+                    "property": "이름",
+                    "rich_text": {
+                        "contains": f"📖 {base_name}",
+                    },
+                },
             }
         )
         
