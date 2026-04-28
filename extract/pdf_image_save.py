@@ -1,101 +1,37 @@
 import os
-import mlx_whisper
-from moviepy import VideoFileClip
-from google import genai
+from pdf2image import convert_from_path
 
-print("🧠 [Audio 팀] MLX-Whisper AI 준비 중 (Apple Silicon 최적화)...")
+def extract_pages_to_images(pdf_path, dpi=300):
+    """
+    PDF 파일을 읽어 지정된 양식(파일명_페이지번호.png)으로 변환하여 저장합니다.
+    """
+    # 파일 경로에서 확장자(.pdf)를 제외한 기본 이름만 추출
+    # 예: "/Users/user/Downloads/0428_34.pdf" -> "0428_34"
+    base_name = os.path.splitext(os.path.basename(pdf_path))[0]
 
-# 메인에서 이미 load_dotenv()를 했으므로 바로 가져옵니다.
-api_key = os.getenv("API_KEY")
-if not api_key:
-    print("⚠️ 오류: API_KEY를 찾을 수 없습니다!")
-client = genai.Client(api_key=api_key)
+    if not os.path.exists(base_name + '_강의자료캡처'):
+        os.makedirs(base_name + '_강의자료캡처')
+        print(f"'{base_name + '_강의자료캡처'}' 폴더를 생성했습니다.")
 
-def get_dynamic_prompt(audio_file_path):
-    base_path = os.path.splitext(audio_file_path)[0]
-    txt_path = f"{base_path}_강의자료.txt"
+    print(f"'{pdf_path}' 변환을 시작합니다...")
     
-    if not os.path.exists(txt_path):
-        return None
-
-    print(f"🧠 [Gemini API] 강의자료에서 핵심 의학 용어 추출 중... ({os.path.basename(txt_path)})")
     try:
-        with open(txt_path, 'r', encoding='utf-8') as f:
-            content = f.read() # 토큰 제한이 넉넉하므로 통째로 읽습니다.
-
-        query = f"""
-        다음은 의과대학 전공 강의록입니다. Whisper AI가 이 강의의 음성을 정확하게 인식할 수 있도록,
-        가장 발음이 헷갈리기 쉽거나 중요한 핵심 전문 용어(해부학, 질병명, 약물, 기호 등)를 딱 30개만 추출해주세요.
-        조건: 다른 부연 설명 없이, 오직 추출된 용어들만 쉼표(,)로 연결해서 출력하세요.
+        pages = convert_from_path(pdf_path, dpi=dpi)
         
-        강의록 내용:
-        {content}
-        """
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=query
-        )
-        keywords = response.text.strip()
-        
-        final_prompt = f"다음은 의학 전공 강의입니다. 전문 용어에 주의하세요: {keywords}"
-        # Whisper initial_prompt 길이 제한 방어 (안전하게 400자로 컷)
-        if len(final_prompt) > 400:
-            final_prompt = final_prompt[:397] + "..."
+        for i, page in enumerate(pages):
+            page_num = i + 1
             
-        return final_prompt
-        
-    except Exception as e:
-        print(f"❌ Gemini 프롬프트 추출 오류: {e}")
-        return None
-
-def extract_and_compress_audio(video_path):
-    base_path = os.path.splitext(video_path)[0]
-    temp_audio_path = f"{base_path}_temp.wav"
-    
-    video = VideoFileClip(video_path)
-    video.audio.write_audiofile(
-        temp_audio_path,
-        fps=16000, nbytes=2, codec='pcm_s16le', ffmpeg_params=["-ac", "1"], logger=None
-    )
-    video.close()
-    return temp_audio_path
-
-def extract_text_from_audio(file_path):
-    print(f"\n🎙️ 스크립트 추출을 시작합니다... (대상: {os.path.basename(file_path)})")
-    extension = os.path.splitext(file_path)[1].lower()
-    temp_file = None
-    
-    if extension == '.mp4':
-        temp_file = extract_and_compress_audio(file_path)
-        target_path = temp_file
-    else:
-        target_path = file_path
-
-    dynamic_initial_prompt = get_dynamic_prompt(file_path)
-
-    try:
-        transcribe_args = {
-            "path_or_hf_repo": "mlx-community/whisper-large-v3-turbo",
-            "language": "ko",
-            "verbose": False,
-            "condition_on_previous_text": False,
-            "no_speech_threshold": 0.55,
-            "compression_ratio_threshold": 2.3,
-            "temperature": (0.0, 0.2, 0.4)
-        }
-        if dynamic_initial_prompt:
-            transcribe_args["initial_prompt"] = dynamic_initial_prompt
-
-        result = mlx_whisper.transcribe(target_path, **transcribe_args)
-        script_text = result["text"].strip()
-        
-        if temp_file and os.path.exists(temp_file):
-            os.remove(temp_file)
+            # 요청하신 저장 양식 적용: base_name_000.png
+            file_name = f"{base_name}_{page_num:03d}.png"
+            output_filepath = os.path.join(base_name + '_강의자료캡처', file_name)
             
-        return script_text
+            # 이미지 저장
+            page.save(output_filepath, 'PNG')
+            print(f"저장 완료: {output_filepath}")
+            
+        print("모든 페이지의 변환이 완료되었습니다!")
+        return True
 
     except Exception as e:
-        print(f"\n❌ 음성 추출 오류 발생: {e}")
-        if temp_file and os.path.exists(temp_file):
-            os.remove(temp_file)
-        return None
+        print(f"변환 중 오류가 발생했습니다: {e}")
+        return False
