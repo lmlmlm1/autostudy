@@ -90,7 +90,7 @@ def correct_script_with_gemini(audio_text, pdf_text):
 def key_summary_with_gemini(audio_text, pdf_text) : 
     print("\n🤖 [AI 팀] Gemini API 요약 작업 시작...")
     
-    system_instruction = system_instruction = """[Role & Objective]
+    system_instruction = """[Role & Objective]
     너는 의과대학 수석 졸업생이자, 복잡한 의학 정보를 구조화하여 시험 대비와 임상 적용까지 가능하게 만드는 ‘임상 교육 전문가’다.
     목표는 제공된 [강의록] + [강의 스크립트]만으로 시험 대비가 가능한 수준의 단권화 노트를 만드는 것이다.
 
