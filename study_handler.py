@@ -7,6 +7,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from extract.pdf_extract import extract_text_from_pdf
 from process.llm_gemini import correct_script_with_gemini
+from process.llm_gemini import key_summary_with_gemini
 from process.notion_sync import trigger_notion_upload
 
 #운영체제에 따른 선택
@@ -92,13 +93,13 @@ class StudyDataHandler(FileSystemEventHandler):
                 pdf_text = f.read()
 
             # 💡 [수정됨] API 호출! (여기서 뻗어도 아래에서 방어합니다)
-            result = correct_script_with_gemini(audio_text, pdf_text)
+            corrected_text = correct_script_with_gemini(audio_text, pdf_text)
+            summary = key_summary_with_gemini(corrected_text, pdf_text)
             # 🛡️ [수정됨] 에러 방패: API가 실패해서 None을 반환했다면 여기서 스톱! (에러 튕김 방지)
             if result is None or result[0] is None:
                 print(f"⚠️ '{base_name}' 교정 실패 (API 오류). 프로그램 종료 없이 다음 파일 대기 상태로 넘어갑니다.")
                 return 
             # 정상 성공 시에만 변수에 담기
-            summary, terms, corrected_text = result
             self.save_result(base_name, corrected_text, "최종교정본")
 
 
@@ -106,7 +107,6 @@ class StudyDataHandler(FileSystemEventHandler):
                 "base_name": base_name,
                 "corrected_text": corrected_text,
                 "summary": summary,
-                "terms": terms,
                 "timestamp": time.time()
             }
             result_json_path = os.path.join(WATCH_PATH, f"{base_name}_result.json")

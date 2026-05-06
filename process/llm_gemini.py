@@ -62,10 +62,6 @@ def correct_script_with_gemini(audio_text, pdf_text):
     
 
     엄격한 출력 형식:
-    (강의 핵심 내용 및 중요한 내용들 요약)
-    [SEPARATOR] 
-    (중요 용어와 설명)
-    [SEPARATOR]
     [Slide 001]
     (1페이지에 해당하는 교정된 스크립트 내용)
     [Slide 002]
@@ -75,7 +71,7 @@ def correct_script_with_gemini(audio_text, pdf_text):
     """
 
     try:
-        response = client.models.generate_content(
+        corrected_text = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=user_prompt,
             config=types.GenerateContentConfig(
@@ -83,16 +79,98 @@ def correct_script_with_gemini(audio_text, pdf_text):
                 temperature=0.1
             )
         )
-
-        parts = response.text.split("[SEPARATOR]")
-        summary = parts[0].strip() if len(parts) > 0 else ""
-        terms = parts[1].strip() if len(parts) > 1 else "용어 정리 실패"
-        corrected_text = parts[2].strip() if len(parts) > 2 else "스크립트 교정 실패"
-        
         print("✨ [AI 팀] Gemini 교정 및 페이지 분할 완료!")
 
-        return summary, terms, corrected_text
+        return corrected_text
         
     except Exception as e:
         print(f"❌ Gemini API 처리 오류: {e}")
-        return None, None, None
+        return None
+
+def key_summary_with_gemini(audio_text, pdf_text) : 
+    print("\n🤖 [AI 팀] Gemini API 요약 작업 시작...")
+    
+    system_instruction = system_instruction = """[Role & Objective]
+    너는 의과대학 수석 졸업생이자, 복잡한 의학 정보를 구조화하여 시험 대비와 임상 적용까지 가능하게 만드는 ‘임상 교육 전문가’다.
+    목표는 제공된 [강의록] + [강의 스크립트]만으로 시험 대비가 가능한 수준의 단권화 노트를 만드는 것이다.
+
+    [Core Principles - 반드시 지킬 것]
+    결론 중심 서술 (요약 금지)
+    “~을 설명함” 같은 메타 서술 금지.
+    → 모든 문장은 반드시 정의, 기전, 진단 기준, 수치, 치료 기준을 직접 포함한 완결형으로 작성.
+
+    정보 통합 (슬라이드 + 구두 설명 결합)
+    강의록 + 스크립트를 분리하지 말고,
+    → 교수의 구두 설명(비유, 임상 팁, 주의사항)을 하나의 완성된 문장으로 재구성.
+
+    중요도 기반 정보 선택
+    시험 및 임상적으로 중요한 정보는 절대 누락 금지
+    저빈도/비핵심 내용은 압축 또는 생략 가능
+    → “모든 정보 포함”보다 “중요 정보의 선명도”를 우선
+
+    출제 시그널 태깅 [강조]
+    다음 조건에 해당하면 반드시 [강조] 태그 부착:
+    “중요하다 / 시험에 나온다 / 외워라 / 자주 틀린다” 등의 직접 표현
+    반복 언급된 개념
+    감별이 중요한 포인트
+    수치, cut-off, 진단 기준, 약물 선택 기준
+
+    전문성 유지
+    의학 용어는 한글 + 영어 병기 (예: 급성 췌장염, acute pancreatitis)
+
+    [Tasks & Output Format]
+    1. 📑 Deep-dive 상세 단권화 노트
+    해당 강의만으로 시험 대비가 가능하도록 정리
+    반드시 포함:
+    정의 (Definition)
+    병태생리 (Pathophysiology: 원인 → 변화 → 결과)
+    진단 기준 (수치, cut-off 포함)
+    검사 선택 기준 (왜 이 검사를 하는지)
+    치료 (1차 선택, 금기, 단계별 접근)
+    애매한 표현 금지 (e.g., “높다” → 수치로 명시)
+
+    2. ⚖️ 감별 진단 & High-yield 정리
+    (1) 감별 진단 비교표 (Table)
+    헷갈리는 질환들을 반드시 표로 비교
+    포함 항목: 원인, 핵심 증상, 결정적 검사 소견, 치료 차이
+    (2) [강조] 내용 모아서 재정리
+    [강조] 태그가 붙은 문장만 따로 모아서 요약 → 시험 직전 복습용
+
+    3. 🛣️ 실전 임상 Decision Flow
+    다음 구조로 작성하되, 분기 조건(if stable / if positive 등) 반드시 포함:
+    Primary Action (첫 대응)
+    Best Initial Test (가장 먼저 할 검사)
+    Conditional Branch (상태에 따른 분기)
+    Confirmatory Test (확진 검사)
+    Definitive Treatment (최종 치료)
+    → 실제 문제 풀이 흐름처럼 “의사 사고 과정”을 재현할 것"""
+
+    # 2. 유저 프롬프트 (실제 입력 데이터)
+    user_prompt = f"""
+    [강의록(PDF) 텍스트]
+    {pdf_text}
+        
+    ======================
+        
+    [음성 스크립트]
+    {audio_text}
+        
+    위 데이터를 바탕으로 System Instruction에 명시된 결과물을 출력해 줘.
+    """
+
+    try:
+        summary = client.models.generate_content(
+            model="gemini-3.0-flash-preview",
+            contents=user_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.1
+            )
+        )
+        print("✨ [AI 팀] Gemini 교정 및 페이지 분할 완료!")
+
+        return summary
+        
+    except Exception as e:
+        print(f"❌ Gemini API 처리 오류: {e}")
+        return None

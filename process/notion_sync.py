@@ -121,10 +121,7 @@ def trigger_notion_upload(base_name):
 
     children.append({"object": "block", "type": "heading_1", "heading_1": {"rich_text": [{"text": {"content": "📌 핵심 요약"}}]}})
     children.extend(create_rich_text_blocks(data["summary"], block_type="bulleted_list_item", split_by_newline=False))
-    
-    children.append({"object": "block", "type": "heading_1", "heading_1": {"rich_text": [{"text": {"content": "📑 용어 정리"}}]}})
-    children.extend(create_rich_text_blocks(data["terms"], block_type="bulleted_list_item", split_by_newline=False))
-    
+
     # ... (중략: 앞부분 로직) ...
 
     children.append({"object": "block", "type": "heading_1", "heading_1": {"rich_text": [{"text": {"content": "📝 슬라이드 스크립트"}}]}})
