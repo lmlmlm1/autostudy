@@ -32,7 +32,7 @@ def get_dynamic_prompt(audio_file_path):
         {content}
         """
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-3.1-flash-lite",
             contents=query
         )
         keywords = response.text.strip()
