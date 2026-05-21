@@ -14,6 +14,7 @@ from process.llm_gemini import correct_script_with_gemini
 from process.notion_sync import trigger_notion_upload
 from process.anki_generator import generate_anki_csv
 from study_handler import StudyDataHandler
+from scripts_to_pdf import append_scripts_to_pdf
 
 #운영체제에 따른 선택
 import platform
@@ -61,10 +62,9 @@ def initial_scan(handler):
 
 
     #파일명을 넣고 원하는 작업을 진행. (안하는 작업을 주석처리)
-    #base_name = "0422_2"
-    #generate_anki_csv(base_name)
-    # from process.notion_sync import append_anki_links_to_notion
-    # append_anki_links_to_notion(base_name)
+    base_name = "0520_2"
+    
+    from process.notion_sync import append_anki_links_to_notion
 
     # file_path = os.path.join(WATCH_PATH, f"{base_name}.mp4")
     # audio_text = extract_text_from_audio(file_path)
@@ -77,11 +77,13 @@ def initial_scan(handler):
     #     handler.save_result(base_name, pdf_text, "강의자료")
 
     #음성 스크립트와 강의자료.txt가 모두 만들어지고 교정해서 폴더에 넣어버림
-    #handler.check_and_start_ai_correction(base_name)
+    # handler.check_and_start_ai_correction(base_name)
 
-    #이미 _result.json까지 만들어진 것을 노션 업로드만
-    #trigger_notion_upload(base_name)
-
+    # #이미 _result.json까지 만들어진 것을 노션 업로드만
+    # trigger_notion_upload(base_name)
+    generate_anki_csv(base_name)
+    # append_scripts_to_pdf(base_name)
+    # append_anki_links_to_notion(base_name)
 
         
 

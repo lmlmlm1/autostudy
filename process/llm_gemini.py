@@ -72,7 +72,8 @@ def correct_script_with_gemini(audio_text, pdf_text):
 
     try:
         corrected_text = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash",
+            # model="gemini-2.5-flash",
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -160,7 +161,7 @@ def key_summary_with_gemini(audio_text, pdf_text) :
 
     try:
         summary = client.models.generate_content(
-            model="gemini-3.0-flash-preview",
+            model="gemini-3.5-flash",
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,

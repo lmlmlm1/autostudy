@@ -14,6 +14,7 @@ from process.llm_gemini import correct_script_with_gemini
 from process.notion_sync import trigger_notion_upload
 from process.anki_generator import generate_anki_csv
 from study_handler import StudyDataHandler
+from scripts_to_pdf import append_scripts_to_pdf
 
 #운영체제에 따른 선택
 import platform
@@ -75,6 +76,7 @@ def initial_scan(handler):
             handler.check_and_start_ai_correction(base_name)
             trigger_notion_upload(base_name)
             generate_anki_csv(base_name)
+            append_scripts_to_pdf(base_name)
         
 
 if __name__ == "__main__":

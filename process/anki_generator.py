@@ -158,7 +158,7 @@ def generate_anki_csv(base_name):
     try:
         # 3. 모델 호출
         response = client.models.generate_content(
-            model="gemini-3-flash-preview", 
+            model="gemini-3.5-flash", 
             contents=prompt,
             config=types.GenerateContentConfig(temperature=0.1)
         )
@@ -287,7 +287,7 @@ def generate_anki_csv(base_name):
         genanki.Package([deck_basic, deck_cloze, deck_mcq]).write_to_file(apkg_path)
         print(f"📦 [APKG 저장] {os.path.basename(apkg_path)} 완료")
 
-        time.sleep(2)
+        time.sleep(5)
         append_anki_links_to_notion(base_name)
 
         print(f"✅ 모든 Anki 작업이 성공적으로 완료되었습니다.")

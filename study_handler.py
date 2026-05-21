@@ -93,22 +93,31 @@ class StudyDataHandler(FileSystemEventHandler):
                 pdf_text = f.read()
 
             # 💡 [수정됨] API 호출! (여기서 뻗어도 아래에서 방어합니다)
-            corrected_text = correct_script_with_gemini(audio_text, pdf_text)
-            summary = key_summary_with_gemini(corrected_text, pdf_text)
-            # 🛡️ [수정됨] 에러 방패: API가 실패해서 None을 반환했다면 여기서 스톱! (에러 튕김 방지)
-            if result is None or result[0] is None:
-                print(f"⚠️ '{base_name}' 교정 실패 (API 오류). 프로그램 종료 없이 다음 파일 대기 상태로 넘어갑니다.")
-                return 
-            # 정상 성공 시에만 변수에 담기
+            # 💡 API 호출!
+            corrected_response = correct_script_with_gemini(audio_text, pdf_text)
+            
+            # API 응답에서 '텍스트'만 확실하게 꺼내기 (핵심!)
+            if corrected_response:
+                corrected_text = corrected_response.text
+            else:
+                print(f"⚠️ '{base_name}' 교정 실패. 결과를 받아오지 못했습니다.")
+                return
+
+            # 요약 작업도 마찬가지로 텍스트만 꺼냅니다.
+            summary_response = key_summary_with_gemini(corrected_text, pdf_text)
+            summary_text = summary_response.text if summary_response else ""
+
+            # 정상 성공 시에만 파일로 저장 (이제 완벽한 string 형태라 에러가 나지 않습니다)
             self.save_result(base_name, corrected_text, "최종교정본")
 
-
+            # JSON에도 객체가 아닌 순수 텍스트(string)를 넣어야 에러가 안 납니다!
             analysis_result = {
                 "base_name": base_name,
                 "corrected_text": corrected_text,
-                "summary": summary,
+                "summary": summary_text,  # 여기도 summary_text로 변경
                 "timestamp": time.time()
             }
+            
             result_json_path = os.path.join(WATCH_PATH, f"{base_name}_result.json")
             with open(result_json_path, 'w', encoding='utf-8') as f:
                 json.dump(analysis_result, f, ensure_ascii=False, indent=4)
