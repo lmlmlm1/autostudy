@@ -94,13 +94,14 @@ class StudyDataHandler(FileSystemEventHandler):
 
             # 💡 [수정됨] API 호출! (여기서 뻗어도 아래에서 방어합니다)
             corrected_text = correct_script_with_gemini(audio_text, pdf_text)
+            # 정상 성공 시에만 변수에 담기
+            self.save_result(base_name, corrected_text, "최종교정본")
+            
             summary = key_summary_with_gemini(corrected_text, pdf_text)
             # 🛡️ [수정됨] 에러 방패: API가 실패해서 None을 반환했다면 여기서 스톱! (에러 튕김 방지)
             if result is None or result[0] is None:
                 print(f"⚠️ '{base_name}' 교정 실패 (API 오류). 프로그램 종료 없이 다음 파일 대기 상태로 넘어갑니다.")
                 return 
-            # 정상 성공 시에만 변수에 담기
-            self.save_result(base_name, corrected_text, "최종교정본")
 
 
             analysis_result = {
