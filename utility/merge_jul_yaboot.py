@@ -18,7 +18,7 @@ WATCH_PATH = os.environ.get("WATCH_PATH")
 # (진단 스크립트로 확인 후 채워 넣을 것 — 채팅에서 안내한 스크립트 참고)
 IGNORE_FONTS_DEFAULT = ["Handwriting", "Pen", "AppleSDGothicNeo"]
 # ─────────────────────────────────────────────────────────────
-
+    
 
 def get_clean_text(page, ignore_fonts=None):
     if ignore_fonts is None:
