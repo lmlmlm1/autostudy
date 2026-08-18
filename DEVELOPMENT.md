@@ -1,4 +1,6 @@
-# AutoStudy
+# AutoStudy 개발·관리 참고 문서
+
+> 이 문서는 개발 또는 설정 관리 담당자를 위한 기술 참고 자료입니다. 일반 사용자는 최상위 [`README.md`](./README.md)에서 시작한 뒤 [`chobo/README.md`](./chobo/README.md), [`chobo/처음_설정하기.md`](./chobo/처음_설정하기.md), [`chobo/사용법.md`](./chobo/사용법.md)을 사용하세요.
 
 > 의과대학 강의의 **PDF 강의록**과 **음성 녹음**을 결합하여, 교정된 슬라이드별 스크립트·단권화 노트·Anki 덱·Notion 페이지·복습용 PDF를 만드는 개인용 학습 파이프라인입니다.
 
@@ -70,17 +72,16 @@ copy env.example .env
 
 ## 환경 변수
 
-`.env`에는 아래 값을 설정합니다. `API_KEY`와 `WATCH_PATH`는 파이프라인의 기본 실행에 필요하며, Notion·Google Drive 결과 연동을 쓸 경우 Notion 항목도 설정해야 합니다.
+`.env`에는 아래 값을 설정합니다. 현재 완료 파이프라인은 Notion 업로드 성공을 복습용 PDF 생성의 전제 조건으로 사용하므로, 표의 API·작업 폴더·Notion 항목은 모두 필요합니다. 일반 사용자는 파일을 직접 편집하지 않고 `설정_변경하기.cmd`에서 값을 저장해야 합니다.
 
 | 변수 | 필요 여부 | 현재 코드에서의 용도 |
 |---|---:|---|
 | `API_KEY` | 필수 | Gemini 키워드 추출, 스크립트 교정, 요약, Anki 카드 생성 |
 | `WATCH_PATH` | 필수 | Google Drive 동기화 작업 폴더의 절대 경로 |
-| `NOTION_TOKEN` | Notion 사용 시 필수 | Notion API 클라이언트 인증 |
-| `NOTION_DATABASE_ID` | Notion 사용 시 필수 | 새 강의 페이지를 생성할 데이터베이스 |
-| `NOTION_DATA_SOURCE_ID` | Anki 링크 추가 시 필수 | 업로드한 Notion 페이지를 다시 찾는 데이터 소스 |
-| `SPARE_KEY` | 현재 미사용 | `env.example`에는 있으나 현재 소스에서 참조하지 않음 |
-| `NOTION_PAGE_ID` | 현재 미사용 | `env.example`에는 있으나 현재 소스에서 참조하지 않음 |
+| `NOTION_TOKEN` | 필수 | Notion API 클라이언트 인증 |
+| `NOTION_DATABASE_ID` | 필수 | 새 강의 페이지를 생성할 데이터베이스 |
+| `NOTION_DATA_SOURCE_ID` | 필수 | 업로드한 Notion 페이지를 다시 찾는 데이터 소스 |
+| `COLAB_FOLDER_PATH` | 설정 도우미용 | Colab 노트북 안의 Google Drive 작업 경로를 갱신하는 데 사용하며, `main.py`가 직접 읽지는 않음 |
 
 예시는 다음과 같습니다.
 
@@ -89,7 +90,8 @@ API_KEY=your_gemini_api_key
 NOTION_TOKEN=secret_xxx
 NOTION_DATABASE_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 NOTION_DATA_SOURCE_ID=collection_or_data_source_id
-WATCH_PATH=G:\내 드라이브\2026-1
+WATCH_PATH=G:\내 드라이브\AutoStudy
+COLAB_FOLDER_PATH=/content/drive/MyDrive/AutoStudy
 ```
 
 ### Google Drive OAuth 준비
@@ -140,7 +142,7 @@ python main.py
 
 ### 2. Google Colab에서 음성 전사하기
 
-[`colab/Transcribe.ipynb`](./colab/Transcribe.ipynb)를 Google Colab에서 열어 실행합니다. 전사 셀의 `folder_path`는 현재 다음 경로로 하드코딩되어 있습니다.
+[`colab/Transcribe.ipynb`](./colab/Transcribe.ipynb)를 Google Colab에서 열어 실행합니다. `설정_변경하기.cmd`는 전사 셀 두 곳의 `folder_path`를 `COLAB_FOLDER_PATH` 값으로 자동 갱신합니다. 설정 도우미를 사용하지 않는 경우에는 다음 하드코딩 경로를 직접 수정해야 합니다.
 
 ```python
 folder_path = "/content/drive/MyDrive/2026-1"
@@ -198,7 +200,7 @@ Anki 생성은 Basic·MCQ·Cloze CSV 세 파일과 통합 `.apkg` 패키지를 �
 
 ## 날짜별 복습용 PDF 합치기
 
-개별 강의의 `_scripted.pdf`가 모두 만들어진 뒤 실행합니다. 실행 전에 `WATCH_PATH/merged/` 폴더를 직접 만들어야 합니다. 현재 유틸리티는 이 폴더를 자동 생성하지 않습니다.
+개별 강의의 `_scripted.pdf`가 모두 만들어진 뒤 실행합니다. 설정 도우미는 최초 설정 시 `WATCH_PATH/merged/` 폴더를 자동으로 만듭니다. 설정 도우미를 사용하지 않는 경우에는 이 폴더를 직접 만들어야 합니다.
 
 ```powershell
 python utility/merge_pdf.py
@@ -216,6 +218,16 @@ python utility/merge_pdf.py
 
 ```text
 .
+├── README.md                       # 사용자 유형을 나누는 최상위 안내
+├── chobo/                          # 비개발자용 문서·설정·실행 파일
+│   ├── README.md                   # 초보자용 시작 안내
+│   ├── 처음_설정하기.md            # 최초 설치·연동 안내
+│   ├── 사용법.md                    # 일상 사용 안내
+│   ├── 처음_설정하기.py            # .env와 Colab 경로를 설정하는 GUI
+│   ├── 설치하기.cmd                # Windows 라이브러리 설치 도우미
+│   ├── 설정_변경하기.cmd           # 설정 GUI 실행 도우미
+│   ├── AutoStudy_실행.cmd          # 일반 사용자용 처리 실행 파일
+│   └── 오늘_복습PDF_합치기.cmd     # 날짜별 합본 실행 파일
 ├── main.py                         # 수동 초기 스캔 진입점
 ├── study_handler.py                # 파일 매칭, 교정·요약, 결과 폴더 이동
 ├── extract/
