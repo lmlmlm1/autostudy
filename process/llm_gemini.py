@@ -9,6 +9,74 @@ if not api_key:
     print("⚠️ API_KEY 환경변수가 설정되지 않았습니다.")
 client = genai.Client(api_key=api_key)
 
+def get_keyword_with_gemini(content):
+    print("\n🤖 [AI 팀] Gemini API keyword 뽑아내기 작업 시작...")
+    system_instruction = """
+    너는 의과대학 강의의 음성인식(ASR)을 보조하는
+    의학 전문용어 추출 전문가다.
+
+    목적:
+    제공된 강의록을 분석하여 Whisper가 이 강의를 받아쓸 때
+    정확하게 인식해야 할 의학 전문용어를 추출한다.
+
+    중요:
+    이것은 시험 대비 요약이 아니다.
+    강의에서 중요한 개념을 요약하는 것이 아니라,
+    Whisper가 음성인식 과정에서 오인식하기 쉬운
+    전문용어를 알려주는 것이 목적이다.
+
+    [우선순위]
+    1. 한국어 발음만으로 오인식하기 쉬운 의학 전문용어
+    2. 영어로 발화될 가능성이 높은 의학용어
+    3. 의학적 약어
+    4. 발음이 비슷하여 오인식하기 쉬운 용어
+    5. 질환명
+    6. 약물명
+    7. 검사명 및 검사 지표
+    8. 해부학적 구조
+    9. 호르몬, 수용체, 효소, 유전자 및 단백질
+    10. 병리학적 용어
+    11. 강의에서 반복적으로 등장하는 전문용어
+
+    [특히 중요]
+    영어와 한국어 표현이 모두 존재하면 둘 다 포함한다.
+
+    예:
+    자궁내막증, endometriosis
+    자간전증, preeclampsia
+    다낭성난소증후군, PCOS
+
+    [제외]
+    - 일반적인 한국어
+    - 너무 흔한 일상어
+    - "중요하다", "시험에 나온다" 등의 일반적인 표현
+    - 강의와 직접 관련 없는 의학용어
+
+    [출력]
+    가장 유용한 전문용어 20~30개를, 우선순위에 맞게
+    쉼표로만 연결하여 출력한다.
+    """
+    user_prompt = f"""
+    다음 의학 강의록에서 핵심 전문 용어를 중요한 순서대로 쉼표로 연결해 추출하세요:\n{content}
+    """
+    
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-lite", 
+            contents=user_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.1
+            )
+        )
+        keywords = response.text.strip()
+        final_prompt = f"의학 강의 키워드 : {keywords}."
+        return final_prompt[:200]
+    except Exception as e:
+        print(f"❌ Gemini API 처리 오류: {e}")
+        return None
+
+
 def correct_script_with_gemini(audio_text, pdf_text):
     print("\n🤖 [AI 팀] Gemini API 교정 작업 시작...")
     
@@ -72,7 +140,8 @@ def correct_script_with_gemini(audio_text, pdf_text):
 
     try:
         corrected_text = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash",
+            # model="gemini-3-flash-preview",
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -90,42 +159,60 @@ def correct_script_with_gemini(audio_text, pdf_text):
 def key_summary_with_gemini(audio_text, pdf_text) : 
     print("\n🤖 [AI 팀] Gemini API 요약 작업 시작...")
     
-    system_instruction = """
-        [Role & Objective]
-    너는 의과대학 수석 졸업생이자, 복잡한 의학 정보를 '시험용으로 극도로 압축 및 구조화'하는 임상 교육 전문가다.
-    목표는 제공된 [강의록] + [강의 스크립트]를 바탕으로, 불필요한 TMI를 제거하고 시험과 임상에 직결되는 핵심만 남긴 콤팩트한 단권화 노트를 만드는 것이다.
+    system_instruction = """[Role & Objective]
+    너는 의과대학 수석 졸업생이자, 복잡한 의학 정보를 구조화하여 시험 대비와 임상 적용까지 가능하게 만드는 ‘임상 교육 전문가’다.
+    목표는 제공된 [강의록] + [강의 스크립트]만으로 시험 대비가 가능한 수준의 단권화 노트를 만드는 것이다.
 
     [Core Principles - 반드시 지킬 것]
-    1. 개조식(Bullet points) 극압축 서술
-    - 서술형 문장 절대 금지. 명사형 종결이나 간결한 문구로 작성.
-    - 각 항목은 1~2줄을 넘지 않도록 텍스트 밀도를 높일 것.
-    2. 메타 서술 및 부연 설명 금지
-    - "~에 대해 설명함", "교수님이 ~라고 말함" 같은 표현 금지. 의학적 팩트만 바로 적을 것.
-    - 단순 배경지식이나 빈도 낮은 정보는 과감히 생략(가지치기)할 것.
-    3. 교수 구두 설명의 엑기스화
-    - 교수의 농담이나 장황한 비유는 생략하되, 그 안에 담긴 '임상 팁/주의사항/암기법'만 추출하여 단답형 팩트로 통합.
-    4. 출제 시그널 태깅 [강조]
-    - 교수 직접 강조, 반복 개념, 핵심 감별 포인트, 주요 수치/cut-off 기준에는 반드시 [강조] 태그 부착.
-    5. 전문성 유지
-    - 의학 용어는 한글 + 영어 병기 (예: 급성 췌장염, acute pancreatitis)
+    결론 중심 서술 (요약 금지)
+    “~을 설명함” 같은 메타 서술 금지.
+    → 모든 문장은 반드시 정의, 기전, 진단 기준, 수치, 치료 기준을 직접 포함한 완결형으로 작성.
+
+    정보 통합 (슬라이드 + 구두 설명 결합)
+    강의록 + 스크립트를 분리하지 말고,
+    → 교수의 구두 설명(비유, 임상 팁, 주의사항)을 하나의 완성된 문장으로 재구성.
+
+    중요도 기반 정보 선택
+    시험 및 임상적으로 중요한 정보는 절대 누락 금지
+    저빈도/비핵심 내용은 압축 또는 생략 가능
+    → “모든 정보 포함”보다 “중요 정보의 선명도”를 우선
+
+    출제 시그널 태깅 [강조]
+    다음 조건에 해당하면 반드시 [강조] 태그 부착:
+    “중요하다 / 시험에 나온다 / 외워라 / 자주 틀린다” 등의 직접 표현
+    반복 언급된 개념
+    감별이 중요한 포인트
+    수치, cut-off, 진단 기준, 약물 선택 기준
+
+    전문성 유지
+    의학 용어는 한글 + 영어 병기 (예: 급성 췌장염, acute pancreatitis)
 
     [Tasks & Output Format]
-    1. 📑 High-yield 핵심 노트
-    - 다음 항목만 개조식으로 타이트하게 정리할 것:
-        * 정의 (Definition)
-        * 핵심 병태생리 (원인 → 결과 키워드만)
-        * 진단 기준 (수치, cut-off 명시)
-        * 검사 (Best Initial vs. Most Accurate 명시)
-        * 치료 (1차 약제/시술, 금기사항 명시)
+    1. 📑 Deep-dive 상세 단권화 노트
+    해당 강의만으로 시험 대비가 가능하도록 정리
+    반드시 포함:
+    정의 (Definition)
+    병태생리 (Pathophysiology: 원인 → 변화 → 결과)
+    진단 기준 (수치, cut-off 포함)
+    검사 선택 기준 (왜 이 검사를 하는지)
+    치료 (1차 선택, 금기, 단계별 접근)
+    애매한 표현 금지 (e.g., “높다” → 수치로 명시)
 
-    2. ⚖️ 감별 진단 핵심 표 (Table)
-    - 헷갈리는 질환이나 유사 증상은 반드시 표(Table) 하나로 압축하여 비교.
-    - [주의] 표 안의 내용은 문장이 아닌 '단어' 위주로 극도로 짧게 작성하여 가독성을 극대화할 것. (원인 | 핵심 증상 | 결정적 검사 | 1차 치료)
+    2. ⚖️ 감별 진단 & High-yield 정리
+    (1) 감별 진단 비교표 (Table)
+    헷갈리는 질환들을 반드시 표로 비교
+    포함 항목: 원인, 핵심 증상, 결정적 검사 소견, 치료 차이
+    (2) [강조] 내용 모아서 재정리
+    [강조] 태그가 붙은 문장만 따로 모아서 요약 → 시험 직전 복습용
 
     3. 🛣️ 실전 임상 Decision Flow
-    - 의사의 사고 과정을 텍스트 화살표(→)를 이용해 3~4단계로 짧게 도식화.
-    - [예시] 증상/상황 → Best Initial Test → [if positive/negative] → Confirmatory Test → Definitive Tx
-    """
+    다음 구조로 작성하되, 분기 조건(if stable / if positive 등) 반드시 포함:
+    Primary Action (첫 대응)
+    Best Initial Test (가장 먼저 할 검사)
+    Conditional Branch (상태에 따른 분기)
+    Confirmatory Test (확진 검사)
+    Definitive Treatment (최종 치료)
+    → 실제 문제 풀이 흐름처럼 “의사 사고 과정”을 재현할 것"""
 
     # 2. 유저 프롬프트 (실제 입력 데이터)
     user_prompt = f"""
@@ -142,7 +229,7 @@ def key_summary_with_gemini(audio_text, pdf_text) :
 
     try:
         summary = client.models.generate_content(
-            model="gemini-3.0-flash-preview",
+            model="gemini-3-flash-preview",
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,

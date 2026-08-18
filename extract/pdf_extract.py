@@ -19,7 +19,7 @@ def extract_text_from_pdf(file_path):
             text = page.get_text().strip()
             
             if len(text) < 10:
-                print(f"  🔍 {i+1} Page: 스캔본 감지, 고정밀 OCR을 실행합니다...")
+                #print(f"  🔍 {i+1} Page: 스캔본 감지, 고정밀 OCR을 실행합니다...")
                 
                 # 1. 해상도 극대화 (약 300~400 DPI 수준으로 뻥튀기)
                 zoom = 4.0 
@@ -45,8 +45,8 @@ def extract_text_from_pdf(file_path):
                 # 5. 전처리된 이미지를 Tesseract에 전달
                 ocr_text = pytesseract.image_to_string(binary_img, lang='kor+eng', config=custom_config)
                 text = ocr_text
-            else:
-                print(f"  ✅ {i+1} Page: 기본 텍스트 추출 완료.")
+            #else:
+                #print(f"  ✅ {i+1} Page: 기본 텍스트 추출 완료.")
                 
             full_text += f"\n--- {i+1} Page ---\n" + text
         

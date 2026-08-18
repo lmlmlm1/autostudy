@@ -80,9 +80,9 @@ class StudyDataHandler(FileSystemEventHandler):
         result_json_path = os.path.join(folder_path, f"{base_name}_done.json")
         # 이미 최종본이 있다면 중복 실행 방지
         if os.path.exists(result_json_path) :
-            print(f"이미 '{base_name}'는 분석완료입니다.")
-            print(f"다시 하고 싶으면 '{base_name}' 폴더를 삭제해 주십시오.")
-            return
+            #print(f"이미 '{base_name}'는 분석완료입니다.")
+            #print(f"다시 하고 싶으면 '{base_name}' 폴더를 삭제해 주십시오.")
+            return False
 
         # 둘 다 존재한다면? Gemini 출동!
         if os.path.exists(audio_txt_path) and os.path.exists(pdf_txt_path):
@@ -93,23 +93,35 @@ class StudyDataHandler(FileSystemEventHandler):
                 pdf_text = f.read()
 
             # 💡 [수정됨] API 호출! (여기서 뻗어도 아래에서 방어합니다)
-            corrected_text = correct_script_with_gemini(audio_text, pdf_text)
-            # 정상 성공 시에만 변수에 담기
-            self.save_result(base_name, corrected_text, "최종교정본")
+            # 💡 API 호출!
+            corrected_response = correct_script_with_gemini(audio_text, pdf_text)
             
-            summary = key_summary_with_gemini(corrected_text, pdf_text)
-            # 🛡️ [수정됨] 에러 방패: API가 실패해서 None을 반환했다면 여기서 스톱! (에러 튕김 방지)
-            if result is None or result[0] is None:
-                print(f"⚠️ '{base_name}' 교정 실패 (API 오류). 프로그램 종료 없이 다음 파일 대기 상태로 넘어갑니다.")
-                return 
+            # API 응답에서 '텍스트'만 확실하게 꺼내기 (핵심!)
+            if corrected_response:
+                corrected_text = corrected_response.text
+            else:
+                print(f"⚠️ '{base_name}' 교정 실패. 결과를 받아오지 못했습니다.")
+                return False
 
+            # 요약 작업도 마찬가지로 텍스트만 꺼냅니다.
+            summary_response = key_summary_with_gemini(corrected_text, pdf_text)
+            if summary_response : 
+                summary_text = summary_response.text
+            else:
+                print(f"⚠️ '{base_name}' 요약 실패. 결과를 받아오지 못했습니다.")
+                return False
 
+            # 정상 성공 시에만 파일로 저장 (이제 완벽한 string 형태라 에러가 나지 않습니다)
+            self.save_result(base_name, corrected_text, "최종교정본")
+
+            # JSON에도 객체가 아닌 순수 텍스트(string)를 넣어야 에러가 안 납니다!
             analysis_result = {
                 "base_name": base_name,
                 "corrected_text": corrected_text,
-                "summary": summary,
+                "summary": summary_text,  # 여기도 summary_text로 변경
                 "timestamp": time.time()
             }
+            
             result_json_path = os.path.join(WATCH_PATH, f"{base_name}_result.json")
             with open(result_json_path, 'w', encoding='utf-8') as f:
                 json.dump(analysis_result, f, ensure_ascii=False, indent=4)
@@ -126,6 +138,63 @@ class StudyDataHandler(FileSystemEventHandler):
                     new_path = os.path.join(target_dir, filename)
                     time.sleep(1)
                     shutil.move(old_path, new_path)
+            return True
 
         else:
-            print(f"⏳ '{base_name}'의 짝꿍 파일이 아직 없습니다.")
+            #print(f"⏳ '{base_name}'의 짝꿍 파일이 아직 없습니다.")
+            return False
+    def retry_summary_if_failed(self, base_name):
+        # 1. 파일들이 이미 이동된 폴더 경로 설정
+        folder_path = os.path.join(WATCH_PATH, base_name)
+        
+        # 2. 폴더 내 필수 파일들 경로
+        result_json_path = os.path.join(folder_path, f"{base_name}_done.json")
+        corrected_txt_path = os.path.join(folder_path, f"{base_name}_최종교정본.txt")
+        pdf_txt_path = os.path.join(folder_path, f"{base_name}_강의자료.txt")
+
+        # 3. 필수 파일 3개가 모두 존재하는지 확인
+        if not (os.path.exists(result_json_path) and 
+                os.path.exists(corrected_txt_path) and 
+                os.path.exists(pdf_txt_path)):
+            print(f"⏳ '{base_name}' 요약 재작업에 필요한 파일이 모두 모이지 않았습니다.")
+            return
+
+        # 4. JSON 파일 읽어오기
+        try:
+            with open(result_json_path, 'r', encoding='utf-8') as f:
+                analysis_result = json.load(f)
+        except json.JSONDecodeError:
+            print(f"⚠️ '{base_name}'의 JSON 파일을 읽는 데 실패했습니다.")
+            return
+
+        # 5. Summary가 이미 제대로 있는지 확인
+        current_summary = analysis_result.get("summary", "")
+        if current_summary and current_summary.strip():
+            print(f"✅ '{base_name}'는 이미 요약이 완료되어 있습니다.")
+            return
+
+        print(f"🔄 '{base_name}' 요약 누락 감지! 요약 작업을 재시도합니다.")
+
+        # 6. 최종교정본과 강의자료 텍스트 읽기
+        with open(corrected_txt_path, 'r', encoding='utf-8') as f:
+            corrected_text = f.read()
+        with open(pdf_txt_path, 'r', encoding='utf-8') as f:
+            pdf_text = f.read()
+
+        # 7. 요약 API 재호출
+        summary_response = key_summary_with_gemini(corrected_text, pdf_text)
+        summary_text = summary_response.text if summary_response else ""
+
+        if summary_text:
+            # 8. 성공했다면 JSON 업데이트 및 덮어쓰기
+            analysis_result["summary"] = summary_text
+            
+            with open(result_json_path, 'w', encoding='utf-8') as f:
+                json.dump(analysis_result, f, ensure_ascii=False, indent=4)
+            print(f"💾 [업데이트 완료] '{base_name}' 요약본이 정상적으로 추가되었습니다.")
+            
+            # (선택) 요약본만 텍스트 파일로 따로 남기고 싶다면 주석 해제
+            # self.save_result(base_name, summary_text, "요약본")
+            # 다만 save_result가 WATCH_PATH에 저장한다면, 폴더 이동 로직이 추가로 필요할 수 있습니다.
+        else:
+            print(f"⚠️ '{base_name}' 요약 API 재호출 실패. 결과를 받아오지 못했습니다.")

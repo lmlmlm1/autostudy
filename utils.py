@@ -14,17 +14,21 @@ from process.llm_gemini import correct_script_with_gemini
 from process.notion_sync import trigger_notion_upload
 from process.anki_generator import generate_anki_csv
 from study_handler import StudyDataHandler
+from utility.make_scripted_pdf import append_scripts_to_pdf 
+from utility.merge_jul_yaboot import process_all_files_in_directory as merge_jul_yaboot
 
 #운영체제에 따른 선택
-import platform
-# 현재 운영체제 확인
-if platform.system() == 'Darwin':  # Mac인 경우
-    from extract.audio_extract_mac import extract_text_from_audio    
-    # 💡 macOS 백그라운드 실행 시 경로 꼬임 방지를 위한 절대 경로 설정
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    load_dotenv(os.path.join(BASE_DIR, '.env'))
-else:  # Windows나 Linux인 경우
-    from extract.audio_extract_windows import extract_text_from_audio
+#import platform
+# 어차피 audio extract는 colab을 통해 할거라 생략
+# # 현재 운영체제 확인
+# if platform.system() == 'Darwin':  # Mac인 경우
+#     from extract.audio_extract_mac import extract_text_from_audio    
+#     # 💡 macOS 백그라운드 실행 시 경로 꼬임 방지를 위한 절대 경로 설정
+#     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+#     load_dotenv(os.path.join(BASE_DIR, '.env'))
+# else:  # Windows나 Linux인 경우
+#     from extract.audio_extract_windows import extract_text_from_audio
+
 # 🎯 감시할 구글 드라이브 로컬 경로 (현재는 테스트용 폴더)
 WATCH_PATH = os.getenv("WATCH_PATH")
 
@@ -61,12 +65,14 @@ def initial_scan(handler):
 
 
     #파일명을 넣고 원하는 작업을 진행. (안하는 작업을 주석처리)
-    #base_name = "0422_2"
+    base_name = "0810_2"
+
+
     #generate_anki_csv(base_name)
     # from process.notion_sync import append_anki_links_to_notion
     # append_anki_links_to_notion(base_name)
 
-    # file_path = os.path.join(WATCH_PATH, f"{base_name}.mp4")
+    # file_path = os.path.join(WATCH_PATH, f"{base_name}.m4a")
     # audio_text = extract_text_from_audio(file_path)
     # if audio_text:
     #     handler.save_result(base_name, audio_text, "음성스크립트")
@@ -81,6 +87,8 @@ def initial_scan(handler):
 
     #이미 _result.json까지 만들어진 것을 노션 업로드만
     #trigger_notion_upload(base_name)
+    #generate_anki_csv(base_name)
+    append_scripts_to_pdf(base_name)
 
 
         
