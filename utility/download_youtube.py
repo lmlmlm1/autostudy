@@ -1,3 +1,5 @@
+#반드시 Target URL을 si=?의 주소를 사용할 것
+
 import os
 import yt_dlp
 from dotenv import load_dotenv
@@ -10,19 +12,25 @@ def download_lossless_audio(video_url, watch_path, prefix):
     """
     ydl_opts = {
         'format': 'bestaudio/best',
+        'noplaylist': True,
         'outtmpl': os.path.join(watch_path, f'{prefix}.%(ext)s'),
-        'cookiefile': 'cookies.txt', 
+        'cookiefile': 'cookies.txt',
+        # 로그인 쿠키 사용 시 문제를 일으키는 tv_downgraded 대신 다른 클라이언트를 사용
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['default', 'web_embedded'],
+            }
+        },
+
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'm4a',  # 👈 wav에서 m4a로 변경
+            'preferredcodec': 'm4a',
         }],
         'postprocessor_args': {
-            # 👈 pcm_s16le(WAV 무손실 코덱) 부분을 제거합니다.
-            # M4A의 기본 코덱(aac)이 자동 적용되며, Whisper 최적화용 샘플링레이트(16kHz)와 채널(Mono)만 유지합니다.
-            'ffmpeg': ['-ar', '16000', '-ac', '1'] 
+            'ffmpeg': ['-ar', '16000', '-ac', '1'],
         },
         'quiet': False,
-        'no_warnings': True
+        'no_warnings': True,
     }
 
     print(f"다운로드 및 오디오 변환 시작: {video_url}")
@@ -36,10 +44,10 @@ def download_lossless_audio(video_url, watch_path, prefix):
         print(f"에러가 발생했습니다: {e}")
 
 # --- 실행 예시 ---
-if __name__ == "__main__":
-    target_url = "https://youtu.be/IffCAv0Voz0?list=PLIMKdiHIXXD4"
+if __name__ == "__main__": 
+    target_url = "https://youtu.be/S_M_w-OnUDw?si=Ja6SdyS4RAl3Zfbc"
     download_folder = WATCH_PATH
-    file_prefix = "0812_1"
+    file_prefix = "0824_4"
 
     if not os.path.exists(download_folder):
         os.makedirs(download_folder)

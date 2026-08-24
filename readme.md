@@ -6,7 +6,7 @@
 
 | 나는 누구인가요? | 먼저 열 파일 | 다음 행동 |
 |---|---|---|
-| 처음 설치하는 의대생·일반 사용자 | [`chobo/README.md`](./chobo/README.md) | 안내에 따라 `chobo` 폴더 안의 파일만 실행합니다. |
+| 처음 설치하는 일반 사용자 | [`chobo/README.md`](./chobo/README.md) | 안내에 따라 `chobo` 폴더 안의 파일만 실행합니다. |
 | API·Notion·Google Drive 설정을 대신 해 주는 사람 | [`DEVELOPMENT.md`](./DEVELOPMENT.md) | 구현 구조와 환경 변수, 연동 요구사항을 확인합니다. |
 | 코드를 수정하거나 오류를 분석하는 개발자 | [`DEVELOPMENT.md`](./DEVELOPMENT.md) | 기술 문서와 소스 코드를 함께 확인합니다. |
 

@@ -87,21 +87,19 @@ class StudyDataHandler(FileSystemEventHandler):
             # 💡 [수정됨] API 호출! (여기서 뻗어도 아래에서 방어합니다)
             # 💡 API 호출!
             corrected_response = correct_script_with_gemini(audio_text, pdf_text)
-            
+
             # API 응답에서 '텍스트'만 확실하게 꺼내기 (핵심!)
-            if corrected_response:
-                corrected_text = corrected_response.text
-            else:
-                print(f"⚠️ '{base_name}' 교정 실패. 결과를 받아오지 못했습니다.")
+            if not corrected_response or not corrected_response.text or not corrected_response.text.strip():
+                print(f"⚠️ '{base_name}' 교정 실패 또는 빈 응답입니다.")
                 return False
+            corrected_text = corrected_response.text.strip()
 
             # 요약 작업도 마찬가지로 텍스트만 꺼냅니다.
             summary_response = key_summary_with_gemini(corrected_text, pdf_text)
-            if summary_response : 
-                summary_text = summary_response.text
-            else:
-                print(f"⚠️ '{base_name}' 요약 실패. 결과를 받아오지 못했습니다.")
+            if not summary_response or not summary_response.text or not summary_response.text.strip():
+                print(f"⚠️ '{base_name}' 요약 실패 또는 빈 응답입니다.")
                 return False
+            summary_text = summary_response.text.strip()
 
             # 정상 성공 시에만 파일로 저장 (이제 완벽한 string 형태라 에러가 나지 않습니다)
             self.save_result(base_name, corrected_text, "최종교정본")

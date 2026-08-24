@@ -9,6 +9,9 @@ __pycache__/
 credentials.json
 token.pickle
 
+# 쿠키 파일
+cookies.txt
+
 # 미디어 및 텍스트 파일 (불필요한 대용량 파일 제외)
 *.mp4
 *.mp3

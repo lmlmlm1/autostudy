@@ -139,7 +139,7 @@ def correct_script_with_gemini(audio_text, pdf_text):
     """
 
     try:
-        corrected_text = client.models.generate_content(
+        response = client.models.generate_content(
             model="gemini-3.5-flash",
             # model="gemini-3-flash-preview",
             contents=user_prompt,
@@ -148,9 +148,10 @@ def correct_script_with_gemini(audio_text, pdf_text):
                 temperature=0.1
             )
         )
+        print("finish_reason:", response.candidates[0].finish_reason)
+        print("safety_ratings:", response.candidates[0].safety_ratings)
         print("✨ [AI 팀] Gemini 교정 및 페이지 분할 완료!")
-
-        return corrected_text
+        return response
         
     except Exception as e:
         print(f"❌ Gemini API 처리 오류: {e}")
@@ -228,7 +229,7 @@ def key_summary_with_gemini(audio_text, pdf_text) :
     """
 
     try:
-        summary = client.models.generate_content(
+        response = client.models.generate_content(
             model="gemini-3-flash-preview",
             contents=user_prompt,
             config=types.GenerateContentConfig(
@@ -236,9 +237,11 @@ def key_summary_with_gemini(audio_text, pdf_text) :
                 temperature=0.1
             )
         )
+        print("finish_reason:", response.candidates[0].finish_reason)
+        print("safety_ratings:", response.candidates[0].safety_ratings)
         print("✨ [AI 팀] Gemini 교정 및 페이지 분할 완료!")
 
-        return summary
+        return response
         
     except Exception as e:
         print(f"❌ Gemini API 처리 오류: {e}")
