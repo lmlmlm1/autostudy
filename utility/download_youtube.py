@@ -45,9 +45,9 @@ def download_lossless_audio(video_url, watch_path, prefix):
 
 # --- 실행 예시 ---
 if __name__ == "__main__": 
-    target_url = "https://youtu.be/S_M_w-OnUDw?si=Ja6SdyS4RAl3Zfbc"
+    target_url = "https://youtu.be/X-HedY3vvjw?si=vT9Fj6QLgvwJBRpp"
     download_folder = WATCH_PATH
-    file_prefix = "0824_4"
+    file_prefix = "1006_4"
 
     if not os.path.exists(download_folder):
         os.makedirs(download_folder)

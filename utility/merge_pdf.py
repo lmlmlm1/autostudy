@@ -13,7 +13,7 @@ def merge_scripted_pdfs(watch_path):
     for item in os.listdir(watch_path):
         full_path = os.path.join(watch_path, item)
         # 폴더이면서 '입력날짜_' 로 시작하는 경우만 필터링
-        if os.path.isdir(full_path) and item.startswith(f"{target_date}_"):
+        if os.path.isdir(full_path) and item.startswith(f"{target_date}"):
             folders.append(item)
             
     if not folders:
@@ -22,7 +22,7 @@ def merge_scripted_pdfs(watch_path):
 
     # 3. 폴더 정렬 (0801_1, 0801_2 순서대로)
     # 뒷자리 숫자를 기준으로 오름차순 정렬
-    folders.sort(key=lambda x: int(x.split('_')[1]))
+    folders.sort()
     print(f"📂 총 {len(folders)}개의 폴더를 발견했습니다. 순서대로 병합을 준비합니다.\n")
 
     merged = fitz.open()

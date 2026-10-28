@@ -9,6 +9,40 @@ if not api_key:
     print("⚠️ API_KEY 환경변수가 설정되지 않았습니다.")
 client = genai.Client(api_key=api_key)
 
+MODELS = {
+    "transcribe": "gemini-3.5-flash",
+    "summary":    "gemini-3.5-flash-lite",
+    "keyword":    "gemini-3.1-flash-lite",
+}
+
+
+import re
+
+def to_model_name(spec):
+    """
+    '3.5'             -> gemini-3.5-flash
+    '3.5-flash'       -> gemini-3.5-flash
+    '3.5-lite'        -> gemini-3.5-flash-lite
+    '3.5-flash-lite'  -> gemini-3.5-flash-lite
+    'gemini-3.5-flash-lite' -> gemini-3.5-flash-lite
+    """
+    spec = spec.strip().lower()
+    m = re.search(r"(\d+(?:\.\d+)?)", spec)
+    if not m:
+        raise SystemExit(f"버전 숫자를 찾을 수 없음: {spec}")
+    version = m.group(1)
+    lite = "lite" in spec
+    return f"gemini-{version}-flash" + ("-lite" if lite else "")
+    
+def apply_cli_args(argv):
+    if len(argv) % 2 != 0:
+        raise SystemExit("사용법: python3 main.py [transcribe|summary|keyword <버전>] ...")
+    for role, spec in zip(argv[0::2], argv[1::2]):
+        if role not in MODELS:
+            raise SystemExit(f"알 수 없는 역할: {role} (가능: {', '.join(MODELS)})")
+        MODELS[role] = to_model_name(spec)
+
+
 def get_keyword_with_gemini(content):
     print("\n🤖 [AI 팀] Gemini API keyword 뽑아내기 작업 시작...")
     system_instruction = """
@@ -62,7 +96,7 @@ def get_keyword_with_gemini(content):
     
     try:
         response = client.models.generate_content(
-            model="gemini-3.1-flash-lite", 
+            model= MODELS["keyword"], 
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -140,7 +174,7 @@ def correct_script_with_gemini(audio_text, pdf_text):
 
     try:
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model= MODELS["transcribe"],
             # model="gemini-3-flash-preview",
             contents=user_prompt,
             config=types.GenerateContentConfig(
@@ -230,7 +264,7 @@ def key_summary_with_gemini(audio_text, pdf_text) :
 
     try:
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model= MODELS["summary"],
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,

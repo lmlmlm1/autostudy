@@ -18,7 +18,7 @@ def extract_text_from_pdf(file_path):
         for i, page in enumerate(doc):
             text = page.get_text().strip()
             
-            if len(text) < 10:
+            if len(text) < 20 or len(text.split()) < 5:
                 #print(f"  🔍 {i+1} Page: 스캔본 감지, 고정밀 OCR을 실행합니다...")
                 
                 # 1. 해상도 극대화 (약 300~400 DPI 수준으로 뻥튀기)

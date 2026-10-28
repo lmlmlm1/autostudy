@@ -86,7 +86,7 @@ def name_trim(file_path):
             
             # 조건에 따른 새 파일 이름 결정
             # 만일 야붙에 필기한 경우, 굳이 merge할 필요가 없음
-            if filename.endswith("야붙필기.pdf") or filename.endswith("야붙.pdf.pdf") or filename.endswith("goodnotes.pdf"): 
+            if filename.endswith("야붙.pdf") or filename.endswith("야붙.pdf.pdf") or filename.endswith("goodnotes.pdf"): 
                 new_full_path = file_path.parent / f"{first_6_chars}.pdf"
             elif filename.endswith("야붙.pdf") or filename.endswith("yaboot.pdf"):
                 new_full_path = file_path / f"{first_6_chars}_yaboot.pdf"
@@ -95,6 +95,7 @@ def name_trim(file_path):
             
             # 이름 변경 실행 (이미 같은 이름이 존재하면 에러가 날 수 있으므로 예외 처리)
             try:
+                #백업을 고려했으나 작업을 정확하게만 수행하면 파일을 잃어버릴 일이 없다.
                 #shutil.copy2(full_path, new_full_path)
                 #print(f"✅ 복사 완료: 원본 유지됨 ➔ '{new_full_path.name}' 생성")
                 os.rename(full_path, new_full_path)

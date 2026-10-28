@@ -9,13 +9,14 @@ from dotenv import load_dotenv
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from extract.pdf_extract import extract_text_from_pdf
-from process.llm_gemini import correct_script_with_gemini
 from process.llm_gemini import get_keyword_with_gemini
+from process.llm_gemini import apply_cli_args
 from process.notion_sync import trigger_notion_upload
 from process.anki_generator import generate_anki_csv
 from study_handler import StudyDataHandler
 from utility.make_scripted_pdf import append_scripts_to_pdf 
 from utility.merge_jul_yaboot import process_all_files_in_directory as merge_jul_yaboot
+
 
 #운영체제에 따른 선택
 #import platform
@@ -96,6 +97,9 @@ def initial_scan(handler):
         
 
 if __name__ == "__main__":
+
+    # AI모델 설정
+    apply_cli_args(sys.argv[1:])
 
     # 🚀 시작하자마자 밀린 숙제(파일)부터 해결!
     event_handler = StudyDataHandler()
